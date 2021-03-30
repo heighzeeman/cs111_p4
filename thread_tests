@@ -1,0 +1,33 @@
+# This file describes test cases for this project. Each block of
+# lines describes one test. The first line is the command to invoke
+# to run the test, and the following lines are the expected output.
+
+./test yield
+main thread yielding to child thread
+child thread running; about to yield
+main thread running, about to yield
+child thread running again; exiting
+main thread running, about to yield (but no other threads)
+main thread back from yield
+
+./test block
+main thread yielding to child
+child thread running; about to block
+main thread yielding again (child still blocked)
+main thread woke up; waking child, then yielding
+child thread woke up from block; exiting
+main thread back from final yield
+
+./test preempt
+main now running
+child1 now running
+child2 now running
+main now running
+child1 now running
+child2 now running
+main now running
+child1 now running; exiting
+child2 now running
+main now running
+child2 now running; exiting
+main now running; finished
