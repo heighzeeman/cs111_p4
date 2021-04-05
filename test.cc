@@ -26,7 +26,8 @@
  * to run: when this is no longer equal to our_id, it means we must have
  * been preempted and then later started running again.
  */
-void wait_for_switch(std::atomic<int> *most_recent, int our_id)
+void
+wait_for_switch(std::atomic<int> *most_recent, int our_id)
 {
     struct timeval start, current;
 

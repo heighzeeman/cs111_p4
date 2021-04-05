@@ -20,11 +20,15 @@ Thread::~Thread()
     // You have to implement this
 }
 
-void Thread::create(std::function<void()> main, size_t stack_size) {
+void
+Thread::create(std::function<void()> main, size_t stack_size)
+{
     // You have to implement this
 }
 
-Thread *Thread::current() {
+Thread *
+Thread::current()
+{
     // Replace the code below with your implementation.
     return nullptr;
 }
@@ -51,9 +55,8 @@ void
 Thread::exit()
 {
     // You have to implement this
-    // You have to implement this
 
-    std::abort();               // control should never reach here
+    std::abort();  // Leave this line--control should never reach here
 }
 
 void

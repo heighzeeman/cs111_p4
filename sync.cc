@@ -49,7 +49,8 @@ void
 Condition::broadcast()
 {
     if (!m_.mine())
-	throw("Condition::broadcast must be called with mutex locked");
+	throw SyncError("Condition::broadcast must be called "
+                        "with mutex locked");
 
     // You need to implement the rest of this function
 }
