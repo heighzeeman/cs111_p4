@@ -93,7 +93,7 @@ private:
 	static std::unordered_map<int, Thread *> threads;
 	static std::queue<Thread *, std::deque<Thread *>> readyThreads;
 	static Thread *toRemove;
-	friend void tstart();
+	static void start();
 	
 	// Private constructor utilised in Create function.
 	Thread(std::function<void()> main, size_t size);

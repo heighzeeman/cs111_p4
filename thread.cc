@@ -4,7 +4,7 @@
 #include "stack.hh"
 #include "thread.hh"
 #include "timer.hh"
-#include <iostream>
+//#include <iostream>
 
 using namespace std::string_literals;
 
@@ -49,27 +49,26 @@ Thread *Thread::initial_thread = new Thread(nullptr);
 // already has a stack, so doesn't need one allocated).
 Thread::Thread(std::nullptr_t) : Id(nextId.get_add()), sp(nullptr), stack(nullptr)
 {
-    // You have to implement this; depending on the contents of your
-    // Thread structure, an empty function body may be sufficient.
-	IntrGuard ig;
 	threads[Id] = this;
 	running_Id.set(Id);
 }
 
-void tstart() {
-	Thread::current()->toExecute();
-	Thread::exit();
+// Default handler that stack_init uses to prepare a stack for use by a new thread
+void Thread::start() {
+	intr_enable(true);	// Re-enable interrupts after a context switch to a new thread.
+	current()->toExecute();
+	exit();
 }
 
 Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_add()), stack(Bytes(new char[stack_size])), toExecute(main)
 {
-    this->sp = stack_init(stack.get(), stack_size, tstart);
+    this->sp = stack_init(stack.get(), stack_size, start);
 }
 
 Thread::~Thread()
 {
 	std::string destmsg = "Invoking destructor for thread: "s + std::to_string(this->Id);
-	std::cout << destmsg << std::endl;
+	//std::cout << destmsg << std::endl;
     // You have to implement this
 }
 
@@ -77,15 +76,13 @@ void
 Thread::create(std::function<void()> main, size_t stack_size)
 {
 	Thread *newthr = new Thread(main, stack_size);
-	IntrGuard ig;
-	Thread::threads[newthr->Id] = newthr;
+	threads[newthr->Id] = newthr;
     newthr->schedule();
 }
 
 Thread *
 Thread::current()
 {
-	IntrGuard ig;
     return threads.at(running_Id.get());
 }
 
@@ -94,7 +91,6 @@ Thread::schedule()
 {
 	IntrGuard ig;
 	readyThreads.push(this);
-    // You have to implement this
 }
 
 void
@@ -102,22 +98,19 @@ Thread::swtch()
 {
 	IntrGuard ig;
 	Thread *prev = current();
-    if (readyThreads.empty()) {
-		std::string errormsg = "CurrThread: "s + std::to_string(Thread::current()->Id) +" Unable to switch to a running thread as there are none."s;
-		std::cout << errormsg << std::endl;
-		Thread::exit();
-	}
+    if (readyThreads.empty()) exit();
+	
 	Thread *next = readyThreads.front();
-	Thread::readyThreads.pop();
-	Thread::running_Id.set(next->Id);
+	readyThreads.pop();
+	running_Id.set(next->Id);
 	stack_switch(&prev->sp, &next->sp);
 }
 
 void
 Thread::yield()
 {
-	Thread::current()->schedule();
-	Thread::swtch();
+	current()->schedule();
+	swtch();
 }
 
 void
@@ -125,23 +118,20 @@ Thread::exit()
 {
 	IntrGuard ig;
 	Thread *currthr = current();
-	if (currthr->Id == 0) {	// Exiting the initial thread
-		std::cout << "Exiting initial thread." << std::endl;
-		_exit(0);
-	}
 	if (toRemove != nullptr) {
 		threads.erase(toRemove->Id);
 		delete toRemove;
 	}
-	toRemove = currthr;
+	if (currthr->Id == 0) ::exit(0);
 	
-    // You have to implement this
-	Thread::swtch();
+	toRemove = currthr;
+	swtch();
+	
     std::abort();  // Leave this line--control should never reach here
 }
 
 void
 Thread::preempt_init(std::uint64_t usec)
-{
-    // You have to implement this
+{	
+	timer_init(usec, yield);
 }
