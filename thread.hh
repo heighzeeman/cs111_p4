@@ -11,6 +11,13 @@
 #include <stdexcept>
 #include <utility>
 
+#include <map>
+#include <deque>
+#include <unordered_map>
+#include <queue>
+
+#include "timer.hh"
+
 
 using std::size_t;
 
@@ -22,6 +29,22 @@ using sp_t = std::uintptr_t *;
 // when Bytes goes out of scope.  Usage:
 //     Bytes mem{new char[8192]};
 using Bytes = std::unique_ptr<char[]>;
+
+
+class AtomicInt {
+public:
+	int get();
+	int get_modify(int delta);
+	int get_add();
+	int get_subtract();
+	int set(int value);
+	AtomicInt();
+	AtomicInt(int initial);
+
+private:
+	int val;
+};
+
 
 class Thread {
 public:
@@ -54,16 +77,33 @@ public:
     // Schedule a thread to run when the CPU is available.  (The
     // thread should not be in a queue when you call this function.)
     void schedule();
+	
+	// Used to identify a thread. initial_thread has Id 0, subsequent threads increment.
+	int Id;
+	
 
 private:
     // Constructor that does not allocate a stack, for initial_thread only.
     Thread(std::nullptr_t);
+	
+	static AtomicInt running_Id;
+	static AtomicInt nextId;
+	static std::unordered_map<int, Thread *> threads;
+	static std::queue<Thread *, std::deque<Thread *>> readyThreads;
+	static Thread *toRemove;
+	static void start();
+	
+	// Private constructor utilised in Create function.
+	Thread(std::function<void()> main, size_t size);
     ~Thread();
     
     // A Thread object for the program's initial thread.
     static Thread *initial_thread;
-    
-    // Fill in other fields and/or methods that you need.
+	// Fill in other fields and/or methods that you need.
+	sp_t sp;
+	Bytes stack;
+	
+	std::function<void()> toExecute;
 };
 
 // Throw this in response to incorrect use of synchronization
