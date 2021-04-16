@@ -80,25 +80,25 @@ public:
 	
 	// Used to identify a thread. initial_thread has Id 0, subsequent threads increment.
 	int Id;
-	
 
 private:
     // Constructor that does not allocate a stack, for initial_thread only.
     Thread(std::nullptr_t);
+	
+	// A Thread object for the program's initial thread.
+    static Thread *initial_thread;
 	
 	static AtomicInt running_Id;
 	static AtomicInt nextId;
 	static std::unordered_map<int, Thread *> threads;
 	static std::queue<Thread *, std::deque<Thread *>> readyThreads;
 	static Thread *toRemove;
-	static void start();
+	friend void tstart();
 	
 	// Private constructor utilised in Create function.
 	Thread(std::function<void()> main, size_t size);
     ~Thread();
     
-    // A Thread object for the program's initial thread.
-    static Thread *initial_thread;
 	// Fill in other fields and/or methods that you need.
 	sp_t sp;
 	Bytes stack;

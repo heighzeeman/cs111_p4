@@ -37,13 +37,13 @@ int AtomicInt::set(int value) {
 	return val;
 }
 
-Thread *Thread::initial_thread = new Thread(nullptr);
-
 AtomicInt Thread::running_Id;
 AtomicInt Thread::nextId;
 std::unordered_map<int, Thread *> Thread::threads;
 std::queue<Thread *, std::deque<Thread *>> Thread::readyThreads;
-Thread *Thread::toRemove;
+Thread *Thread::toRemove = nullptr;
+
+Thread *Thread::initial_thread = new Thread(nullptr);
 
 // Create a placeholder Thread for the program's initial thread (which
 // already has a stack, so doesn't need one allocated).
@@ -54,18 +54,16 @@ Thread::Thread(std::nullptr_t) : Id(nextId.get_add()), sp(nullptr), stack(nullpt
 	IntrGuard ig;
 	threads[Id] = this;
 	running_Id.set(Id);
-	toRemove = nullptr;
 }
 
-void Thread::start() {
-	current()->toExecute();
-	exit();
+void tstart() {
+	Thread::current()->toExecute();
+	Thread::exit();
 }
 
-Thread::Thread(std::function<void()> main, size_t stack_size) : stack(Bytes(new char[stack_size])), toExecute(main)
+Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_add()), stack(Bytes(new char[stack_size])), toExecute(main)
 {
-	this->Id = nextId.get_add();
-    this->sp = stack_init(stack.get(), stack_size, Thread::start);
+    this->sp = stack_init(stack.get(), stack_size, tstart);
 }
 
 Thread::~Thread()
@@ -95,7 +93,7 @@ void
 Thread::schedule()
 {
 	IntrGuard ig;
-	Thread::readyThreads.push(this);
+	readyThreads.push(this);
     // You have to implement this
 }
 
@@ -103,15 +101,16 @@ void
 Thread::swtch()
 {
 	IntrGuard ig;
-    if (Thread::readyThreads.empty()) {
+	Thread *prev = current();
+    if (readyThreads.empty()) {
 		std::string errormsg = "CurrThread: "s + std::to_string(Thread::current()->Id) +" Unable to switch to a running thread as there are none."s;
 		std::cout << errormsg << std::endl;
 		Thread::exit();
 	}
-	Thread *next = Thread::readyThreads.front();
+	Thread *next = readyThreads.front();
 	Thread::readyThreads.pop();
 	Thread::running_Id.set(next->Id);
-	stack_switch(&Thread::current()->sp, &next->sp);
+	stack_switch(&prev->sp, &next->sp);
 }
 
 void
@@ -125,16 +124,16 @@ void
 Thread::exit()
 {
 	IntrGuard ig;
-	Thread *currthr = Thread::current();
-	Thread::threads.erase(currthr->Id);
+	Thread *currthr = current();
 	if (currthr->Id == 0) {	// Exiting the initial thread
 		std::cout << "Exiting initial thread." << std::endl;
 		_exit(0);
 	}
-	if (Thread::toRemove != nullptr) {
-		delete Thread::toRemove;
+	if (toRemove != nullptr) {
+		threads.erase(toRemove->Id);
+		delete toRemove;
 	}
-	Thread::toRemove = currthr;
+	toRemove = currthr;
 	
     // You have to implement this
 	Thread::swtch();
