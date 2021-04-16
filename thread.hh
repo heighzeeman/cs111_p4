@@ -31,6 +31,7 @@ using sp_t = std::uintptr_t *;
 using Bytes = std::unique_ptr<char[]>;
 
 
+// Thread-specific implementation of Atomic Integer suitable for our threads
 class AtomicInt {
 public:
 	int get();
@@ -85,6 +86,9 @@ private:
     // Constructor that does not allocate a stack, for initial_thread only.
     Thread(std::nullptr_t);
 	
+	// Implementation allows default destructor
+	~Thread() = default;
+	
 	// A Thread object for the program's initial thread.
     static Thread *initial_thread;
 	
@@ -97,7 +101,6 @@ private:
 	
 	// Private constructor utilised in Create function.
 	Thread(std::function<void()> main, size_t size);
-    ~Thread();
     
 	// Fill in other fields and/or methods that you need.
 	sp_t sp;

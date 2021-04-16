@@ -8,6 +8,8 @@
 
 using namespace std::string_literals;
 
+
+// Implementation of the AtomicInt class
 AtomicInt::AtomicInt(void) : val(0) {};
 AtomicInt::AtomicInt(int initial) : val(initial) {};
 
@@ -37,13 +39,19 @@ int AtomicInt::set(int value) {
 	return val;
 }
 
+// End implementation of AtomicInt
+
+
+// Instantiate static members of class Thread
 AtomicInt Thread::running_Id;
 AtomicInt Thread::nextId;
 std::unordered_map<int, Thread *> Thread::threads;
 std::queue<Thread *, std::deque<Thread *>> Thread::readyThreads;
 Thread *Thread::toRemove = nullptr;
-
 Thread *Thread::initial_thread = new Thread(nullptr);
+
+
+// Begin implementation of Thread
 
 // Create a placeholder Thread for the program's initial thread (which
 // already has a stack, so doesn't need one allocated).
@@ -55,7 +63,7 @@ Thread::Thread(std::nullptr_t) : Id(nextId.get_add()), sp(nullptr), stack(nullpt
 
 // Default handler that stack_init uses to prepare a stack for use by a new thread
 void Thread::start() {
-	intr_enable(true);	// Re-enable interrupts after a context switch to a new thread.
+	intr_enable(true);	// Re-enable interrupts after a context switch to a newly-created thread.
 	current()->toExecute();
 	exit();
 }
@@ -65,12 +73,10 @@ Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_ad
     this->sp = stack_init(stack.get(), stack_size, start);
 }
 
-Thread::~Thread()
+/*Thread::~Thread()
 {
-	std::string destmsg = "Invoking destructor for thread: "s + std::to_string(this->Id);
-	//std::cout << destmsg << std::endl;
-    // You have to implement this
-}
+
+}*/	// We can use default destructor
 
 void
 Thread::create(std::function<void()> main, size_t stack_size)
