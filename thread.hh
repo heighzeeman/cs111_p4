@@ -46,7 +46,6 @@ private:
 	int val;
 };
 
-
 class Thread {
 public:
 
@@ -81,7 +80,10 @@ public:
 	
 	// Used to identify a thread. initial_thread has Id 0, subsequent threads increment.
 	int Id;
-
+	
+	// Returns a pointer to a Thread with the given Id
+	static Thread *threadFromId(int Id);
+	
 private:
     // Constructor that does not allocate a stack, for initial_thread only.
     Thread(std::nullptr_t);
@@ -92,10 +94,10 @@ private:
 	// A Thread object for the program's initial thread.
     static Thread *initial_thread;
 	
-	static AtomicInt running_Id;
+	static AtomicInt runningId;
 	static AtomicInt nextId;
 	static std::unordered_map<int, Thread *> threads;
-	static std::queue<Thread *, std::deque<Thread *>> readyThreads;
+	static std::queue<Thread *> readyThreads;
 	static Thread *toRemove;
 	static void start();
 	
@@ -109,12 +111,6 @@ private:
 	std::function<void()> toExecute;
 };
 
-// Throw this in response to incorrect use of synchronization
-// primitives.  Example:
-//    throw SyncError("must hold Mutex to wait on Condition");
-struct SyncError : public std::logic_error {
-    using std::logic_error::logic_error;
-};
 
 // A standard mutex providing mutual exclusion.
 class Mutex {
@@ -124,10 +120,14 @@ public:
 
     // True if the lock is held by the current thread
     bool mine();
-
+	Mutex();
+	
 private:
-    // You must implement this object
+	int ownerId;
+    bool locked;
+	std::queue<int> waitingThreads;
 };
+
 
 // A condition variable with one small twist.  Traditionally you
 // supply a mutex when you wait on a condition variable, and it is an
@@ -144,9 +144,16 @@ public:
 
 private:
     Mutex &m_;
-
-    // You need to implement this object
+	std::queue<int> waitingThreads;
 };
+
+// Throw this in response to incorrect use of synchronization
+// primitives.  Example:
+//    throw SyncError("must hold Mutex to wait on Condition");
+struct SyncError : public std::logic_error {
+    using std::logic_error::logic_error;
+};
+
 
 // An object that acquires a lock in its constructor and releases it
 // in the destructor, so as to avoid the risk that you forget to

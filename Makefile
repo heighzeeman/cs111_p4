@@ -6,7 +6,7 @@ TARGETS = test
 CXXBASE = g++
 CXX = $(CXXBASE) $(ARCH) -std=c++17
 CC = $(CXX)
-CXXFLAGS = -ggdb -O3 -Wall -Werror
+CXXFLAGS = -ggdb -O -Wall -Werror
 
 OBJS = stack_init.o stack_switch.o sync.o test.o thread.o timer.o
 HEADERS = stack.hh thread.hh timer.hh

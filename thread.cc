@@ -43,7 +43,7 @@ int AtomicInt::set(int value) {
 
 
 // Instantiate static members of class Thread
-AtomicInt Thread::running_Id;
+AtomicInt Thread::runningId;
 AtomicInt Thread::nextId;
 std::unordered_map<int, Thread *> Thread::threads;
 std::queue<Thread *> Thread::readyThreads;
@@ -58,7 +58,7 @@ Thread *Thread::initial_thread = new Thread(nullptr);
 Thread::Thread(std::nullptr_t) : Id(nextId.get_add()), sp(nullptr), stack(nullptr)
 {
 	threads[Id] = this;
-	running_Id.set(Id);
+	runningId.set(Id);
 }
 
 // Default handler that stack_init uses to prepare a stack for use by a new thread
@@ -92,7 +92,7 @@ Thread *
 Thread::current()
 {
 	IntrGuard ig;
-    return threads.at(running_Id.get());
+    return threads.at(runningId.get());
 }
 
 void
@@ -107,11 +107,11 @@ Thread::swtch()
 {
 	IntrGuard ig;
 	Thread *prev = current();
-    if (readyThreads.empty()) ::exit(0);
+    if (readyThreads.empty()) exit();
 	
 	Thread *next = readyThreads.front();
 	readyThreads.pop();
-	running_Id.set(next->Id);
+	runningId.set(next->Id);
 	stack_switch(&prev->sp, &next->sp);
 }
 
@@ -122,6 +122,14 @@ Thread::yield()
 	current()->schedule();
 	swtch();
 }
+
+Thread *
+Thread::threadFromId(int Id)
+{
+	IntrGuard ig;
+	return threads.at(Id);
+}
+
 
 void
 Thread::exit()
@@ -134,7 +142,8 @@ Thread::exit()
 	}
 	
 	toRemove = currthr;
-	swtch();
+	if (!readyThreads.empty()) swtch();
+	else ::exit(0);
 	
     std::abort();  // Leave this line--control should never reach here
 }
