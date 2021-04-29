@@ -11,7 +11,7 @@ Mutex::lock()
     if (mine())
 	throw SyncError("acquiring mutex already locked by this thread");
 	
-	IntrGuard ig;
+    IntrGuard ig;
     if (locked) {
 		waitingThreads.push(Thread::current()->Id);
 		Thread::swtch();
@@ -27,7 +27,7 @@ Mutex::unlock()
     if (!mine())
 	throw SyncError("unlocking mutex not locked by this thread");
 
-	IntrGuard ig;
+    IntrGuard ig;
     if (!waitingThreads.empty()) {
 		Thread *next = Thread::threadFromId(waitingThreads.front());
 		waitingThreads.pop();
@@ -39,46 +39,43 @@ Mutex::unlock()
 bool
 Mutex::mine()
 {
-	IntrGuard ig;
+    IntrGuard ig;
     return locked && Thread::current()->Id == this->ownerId;
 }
 
 void
 Condition::wait()
 {
-    if (!m_.mine())
-	throw SyncError("Condition::wait must be called with mutex locked");
+    if (!m_.mine()) throw SyncError("Condition::wait must be called with mutex locked");
 
     IntrGuard ig;
-	waitingThreads.push(Thread::current()->Id);
-	m_.unlock();
-	Thread::swtch();
-	m_.lock();
+    waitingThreads.push(Thread::current()->Id);
+    m_.unlock();
+    Thread::swtch();
+    m_.lock();
 }
 
 void
 Condition::signal()
 {
-    if (!m_.mine())
-	throw SyncError("Condition::signal must be called with mutex locked");
+    if (!m_.mine()) throw SyncError("Condition::signal must be called with mutex locked");
 
-	IntrGuard ig;
+    IntrGuard ig;
     if (!waitingThreads.empty()) {
-		Thread::threadFromId(waitingThreads.front())->schedule();
-		waitingThreads.pop();
-	}
+	Thread::threadFromId(waitingThreads.front())->schedule();
+	waitingThreads.pop();
+    }
 }
 
 void
 Condition::broadcast()
 {
     if (!m_.mine())
-	throw SyncError("Condition::broadcast must be called "
-                        "with mutex locked");
+        throw SyncError("Condition::broadcast must be called with mutex locked");
 						
-	IntrGuard ig;
-	while (!waitingThreads.empty()) {
-		Thread::threadFromId(waitingThreads.front())->schedule();
-		waitingThreads.pop();
-	}
+    IntrGuard ig;
+    while (!waitingThreads.empty()) {
+	Thread::threadFromId(waitingThreads.front())->schedule();
+	waitingThreads.pop();
+    }
 }
