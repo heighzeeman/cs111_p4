@@ -43,10 +43,10 @@ int AtomicInt::set(int value) {
 
 
 // Instantiate static members of class Thread
-AtomicInt Thread::running_Id;
+AtomicInt Thread::runningId;
 AtomicInt Thread::nextId;
 std::unordered_map<int, Thread *> Thread::threads;
-std::queue<Thread *, std::deque<Thread *>> Thread::readyThreads;
+std::queue<Thread *> Thread::readyThreads;
 Thread *Thread::toRemove = nullptr;
 Thread *Thread::initial_thread = new Thread(nullptr);
 
@@ -58,7 +58,7 @@ Thread *Thread::initial_thread = new Thread(nullptr);
 Thread::Thread(std::nullptr_t) : Id(nextId.get_add()), sp(nullptr), stack(nullptr)
 {
 	threads[Id] = this;
-	running_Id.set(Id);
+	runningId.set(Id);
 }
 
 // Default handler that stack_init uses to prepare a stack for use by a new thread
@@ -68,7 +68,8 @@ void Thread::start() {
 	exit();
 }
 
-Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_add()), stack(Bytes(new char[stack_size])), toExecute(main)
+Thread::Thread(std::function<void()> main, size_t stack_size)
+	: Id(nextId.get_add()), stack(Bytes(new char[stack_size])), toExecute(main)
 {
     this->sp = stack_init(stack.get(), stack_size, start);
 }
@@ -81,6 +82,7 @@ Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_ad
 void
 Thread::create(std::function<void()> main, size_t stack_size)
 {
+	IntrGuard ig;
 	Thread *newthr = new Thread(main, stack_size);
 	threads[newthr->Id] = newthr;
     newthr->schedule();
@@ -89,7 +91,8 @@ Thread::create(std::function<void()> main, size_t stack_size)
 Thread *
 Thread::current()
 {
-    return threads.at(running_Id.get());
+	IntrGuard ig;
+    return threads.at(runningId.get());
 }
 
 void
@@ -108,16 +111,25 @@ Thread::swtch()
 	
 	Thread *next = readyThreads.front();
 	readyThreads.pop();
-	running_Id.set(next->Id);
+	runningId.set(next->Id);
 	stack_switch(&prev->sp, &next->sp);
 }
 
 void
 Thread::yield()
 {
+	IntrGuard ig;
 	current()->schedule();
 	swtch();
 }
+
+Thread *
+Thread::threadFromId(int Id)
+{
+	IntrGuard ig;
+	return threads.at(Id);
+}
+
 
 void
 Thread::exit()
@@ -128,10 +140,10 @@ Thread::exit()
 		threads.erase(toRemove->Id);
 		delete toRemove;
 	}
-	if (currthr->Id == 0) ::exit(0);
 	
 	toRemove = currthr;
-	swtch();
+	if (!readyThreads.empty()) swtch();
+	else ::exit(0);
 	
     std::abort();  // Leave this line--control should never reach here
 }
