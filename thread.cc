@@ -46,7 +46,7 @@ int AtomicInt::set(int value) {
 AtomicInt Thread::running_Id;
 AtomicInt Thread::nextId;
 std::unordered_map<int, Thread *> Thread::threads;
-std::queue<Thread *, std::deque<Thread *>> Thread::readyThreads;
+std::queue<Thread *> Thread::readyThreads;
 Thread *Thread::toRemove = nullptr;
 Thread *Thread::initial_thread = new Thread(nullptr);
 
@@ -68,7 +68,8 @@ void Thread::start() {
 	exit();
 }
 
-Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_add()), stack(Bytes(new char[stack_size])), toExecute(main)
+Thread::Thread(std::function<void()> main, size_t stack_size)
+	: Id(nextId.get_add()), stack(Bytes(new char[stack_size])), toExecute(main)
 {
     this->sp = stack_init(stack.get(), stack_size, start);
 }
@@ -81,6 +82,7 @@ Thread::Thread(std::function<void()> main, size_t stack_size) : Id(nextId.get_ad
 void
 Thread::create(std::function<void()> main, size_t stack_size)
 {
+	IntrGuard ig;
 	Thread *newthr = new Thread(main, stack_size);
 	threads[newthr->Id] = newthr;
     newthr->schedule();
@@ -89,6 +91,7 @@ Thread::create(std::function<void()> main, size_t stack_size)
 Thread *
 Thread::current()
 {
+	IntrGuard ig;
     return threads.at(running_Id.get());
 }
 
@@ -104,7 +107,7 @@ Thread::swtch()
 {
 	IntrGuard ig;
 	Thread *prev = current();
-    if (readyThreads.empty()) exit();
+    if (readyThreads.empty()) ::exit(0);
 	
 	Thread *next = readyThreads.front();
 	readyThreads.pop();
@@ -115,6 +118,7 @@ Thread::swtch()
 void
 Thread::yield()
 {
+	IntrGuard ig;
 	current()->schedule();
 	swtch();
 }
@@ -128,7 +132,6 @@ Thread::exit()
 		threads.erase(toRemove->Id);
 		delete toRemove;
 	}
-	if (currthr->Id == 0) ::exit(0);
 	
 	toRemove = currthr;
 	swtch();
