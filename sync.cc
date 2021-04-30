@@ -40,7 +40,7 @@ bool
 Mutex::mine()
 {
     IntrGuard ig;
-    return locked && Thread::current()->Id == this->ownerId;
+    return locked && Thread::current()->Id == ownerId;
 }
 
 void
